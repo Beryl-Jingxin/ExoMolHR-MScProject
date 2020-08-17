@@ -29,7 +29,7 @@ isotopologue = pd.DataFrame()
 molecule_single = pd.DataFrame()
 num_isotopologues = pd.DataFrame()
 
-for i in tqdm_nb(range(row)):
+for i in tqdm(range(row)):
         
     _iso_slug = exomol_all[first.isin(['Iso-slug'])]['c0'].values
     _iso_formula = exomol_all[first.isin(['IsoFormula'])]['c0'].values
@@ -63,7 +63,7 @@ molecule = pd.read_csv(StringIO(molecule_str), sep='\s+', header=None)
 def_url = pd.DataFrame()
 def_num = len(iso_slug)
 
-for i in tqdm_nb(range(def_num)):
+for i in tqdm(range(def_num)):
     def_url = def_url.append('http://www.exomol.com/db/' + molecule[i] + '/'
                              + iso_slug.values[i] + '/'+ isotopologue.values[i] + '/'
                              + iso_slug.values[i] + '__' + isotopologue.values[i] + '.def')
@@ -77,7 +77,7 @@ def_url.columns = ['def url','IsoFormula']
 # It will be more convenient for processing data later.
 def download_deffile(file_url):
     failed_list = [] 
-    for _link in tqdm_nb(file_url['def url'].values):
+    for _link in tqdm(file_url['def url'].values):
         
         link = _link
         iso_slug = link.split('/')[-4]
