@@ -1,5 +1,7 @@
+#!/usr/bin/env python
+# coding: utf-8
 
-
+# ## Import all what we need.
 import os
 import math
 import glob
@@ -10,8 +12,10 @@ from tqdm import tqdm
 from io import StringIO
 
 
-
-
+# Part 1: HITRAN Online Information.
+# Get the names of molecules, iso-slugs and isotopoluge datasets from the api__urls.txt
+# which saved the URLs with molecule, iso-slug and isotopologue.
+# Combine them with '/' for reading files from folders more convenient later.
 molecule = []
 iso_slug = []
 isotopologue = []
@@ -25,22 +29,21 @@ for line in open('./data/url/api__urls.txt'):
 
 molecule_list = list(set(molecule))
 molecule_list.sort(key=molecule.index)
-
 iso_slug_list = list(set(iso_slug))
 iso_slug_list.sort(key=iso_slug.index)
-
 isotopologue_list = list(set(isotopologue))
 isotopologue_list.sort(key=isotopologue.index)
-
 path_mol_iso_list = list(set(path_mol_iso))
 path_mol_iso_list.sort(key=path_mol_iso.index)
 
-
+# Convert the iso-slug names into the ones which are shown in the table of
+# HITRAN online website. It will help us to get their corresponding molecule
+# numbers, isotopologue numbers and fractional abundances. 
 unc_formula = pd.DataFrame(eval(str(iso_slug_list).replace('1H','H')
                                 .replace('-','').replace('_p','+')))
 unc_formula.columns = ['exomol formula']
 
-
+# NH3 information for HITRAN format.
 path_mol_iso_list = ['NH3/14N-1H3/CoYuTe']
 hitran_online = pd.DataFrame()
 hitran_online['molecule ID'] = ['11']
@@ -49,16 +52,11 @@ hitran_online['exomol formula'] = ['14NH3']
 hitran_online['fractional abundance'] = ['0.995872']
 hitran_online['Q(296K)'] = ['1725.22']
 
-
-
 path_mol_iso = path_mol_iso_list[0]
 M_mol_iso = 'M of ' + path_mol_iso.replace('/','__')
 molecule_id = int(hitran_online['molecule ID'][0])
 isotopologue_id = int(hitran_online['isotopologue ID'][0])
 fractional_abundance = float(hitran_online['fractional abundance'][0])
-
-
-
 
 read_path = './data/www.exomol.com/db/'
 
@@ -73,26 +71,18 @@ else:
     os.makedirs(result_path, exist_ok=True)
 
 
-
+# Part 2: Process Data.
+# ## 2.1 Read States File.
+# Consider column names of states file with def files.
 path_mol_iso = path_mol_iso_list[0]
-def_path = glob.glob('./data/def/' + '*' + path_mol_iso.split('/')[1]
-                     + '__' + path_mol_iso.split('/')[2] + '.def')
-def_reader = pd.read_csv(def_path[0], sep='\\s+', names=['1','2','3','4','5'], header=None)
-#list(def_reader[def_reader['4'].isin(['label'])]['1'].values)
-
-
-
-
-
 states_col_name = (['ID','energy','g_tot','J_tot','Unc']
                    + ['+/-','Gtot','i','n1','n2','n3','n4','l3',
                       'l4','taui','J','K','Grot','v1','v2','v3',
                       'v4','v5','v6','Gvib','Ecalc'])
 
-
-
-
-
+# Read compressed states file in chunks directly.
+# Extract rows of states file whose uncertainty indices are small than 0.001
+# to be the considered states file.
 s_df = dict()
 states_df = pd.DataFrame()
 states_filenames = glob.glob(read_path + path_mol_iso + '/' + path_mol_iso.split('/')[1]
@@ -109,45 +99,23 @@ for states_filename in states_filenames:
 # Extract rows of states file whose uncertainty indices are small than 0.001.
 unc_states_df = states_df[states_df['Unc'] < float(0.001)]
 
-
-
-
-
-
-
+# 2.2 Read Partition Function File.
 pf_col_name = ['T', 'Q']
 pf_path = read_path + path_mol_iso + '/' + path_mol_iso.replace('/','__') + '_pf.csv'
-
 pf_url = ('http://www.exomol.com/db/' + path_mol_iso + '/'
           + path_mol_iso.split('/')[1] + '__' + path_mol_iso.split('/')[2] + '.pf')   
 response = requests.get(pf_url)
 content = response.text  
 pf_data = pd.read_csv(StringIO(content), sep='\s+', names=pf_col_name, header=None, engine='python')
 pf_data.to_csv(pf_path, header=False)
-
 pf_df = pd.read_csv(pf_path, header=None, names=pf_col_name)
 # Partition function defined as sum over states at standard 296K
 Q = pf_df.iloc[296-1]['Q']
 
-
-
-T = 296                      # Reference temperature k
-h = 6.62607015e-34           # Planck's const (J s)
-c = 299792458                # Velocity of light (m s-1)
-kB = 1.380649e-23            # Boltzmann's const (J K-1)
-
-c2 = h * c * 100 / kB                  # Second radiation constant (cm K)
-pi_c_8 = 1 / (8 * np.pi * c * 100)     # 8 * pi * c (cm-1 s)
-c2_T = c2 / T                          # c2 / T  (cm)
-
-
-
-
+# 2.3 Read Transitions Files.
+# Extract rows of transitionos files whose upper states ID and
+# lower states ID are all in considered states file.
 def extract_unc_trans(trans_df):
-    """
-    
-    
-    """
     upper_id = trans_df['i'].values
     lower_id = trans_df['f'].values
     state_id = unc_states_df['ID'].values
@@ -164,37 +132,39 @@ def extract_unc_trans(trans_df):
         
     return unc_trans_df
 
+# 2.4 Calculating.
+# HITRAN Parameters for calculating.
+T = 296                  # Reference temperature k
+h = 6.62607015e-34           # Planck's const (J s)
+c = 299792458              # Velocity of light (m s-1)
+kB = 1.380649e-23           # Boltzmann's const (J K-1)
+c2 = h * c * 100 / kB             # Second radiation constant (cm K)
+pi_c_8 = 1 / (8 * np.pi * c * 100)    # 8 * pi * c (cm-1 s)
+c2_T = c2 / T                  # c2 / T  (cm)
 
-
-
-
+# Process data for CSV format.
 def calculate_csv(unc_states_df, unc_trans_df):
-    """
-    
-    
-    """
     unc_upper_id = unc_trans_df['i'].values
     unc_lower_id = unc_trans_df['f'].values 
     state_id = unc_states_df['ID']
     unc_trans_num = unc_trans_df['i'].count()
 
-    wavenumber = []                         # Vacuum wavenumber (cm−1)
-    intensity = pd.DataFrame()              # Intensities (cm-1/molecule cm-2) at standard 296K         
-    A_coefficient = []                      # Einstein A-coefficient
+    wavenumber = []                  # Vacuum wavenumber (cm−1)
+    intensity = pd.DataFrame()           # Intensities (cm-1/molecule cm-2) at standard 296K         
+    A_coefficient = []                # Einstein A-coefficient
     lower_state_energy = pd.DataFrame()     # lower state energy
-    uncertainty = []                        # Uncertainty indices
+    uncertainty = []                  # Uncertainty indices
     weight_upper_state = pd.DataFrame()     # Statistical weight of upper state
     weight_lower_state = pd.DataFrame()     # Statistical weight of lower state
-    upper_global_quanta = []                # Upper-state 'global' quanta
-    lower_global_quanta = []                # Lower-state 'global' quanta
-    upper_local_quanta = []                 # Upper-state 'local' quanta
-    lower_local_quanta = []                 # Lower-state 'local' quanta
-
+    upper_global_quanta = []            # Upper-state 'global' quanta
+    lower_global_quanta = []            # Lower-state 'global' quanta
+    upper_local_quanta = []             # Upper-state 'local' quanta
+    lower_local_quanta = []             # Lower-state 'local' quanta
 
     for i in tqdm(range(unc_trans_num)):
         id_i = unc_upper_id[i]
         id_f = unc_lower_id[i]
-        A = unc_trans_df['A_if'].values[i]                               # Einstein-A coefficient (s−1)
+        A = unc_trans_df['A_if'].values[i]                       # Einstein-A coefficient (s−1)
         g_i = unc_states_df[state_id.isin([id_i])]['g_tot'].values       # Total degeneracy of upper state
         g_f = unc_states_df[state_id.isin([id_f])]['g_tot'].values       # Total degeneracy of lower state
         E_i = unc_states_df[state_id.isin([id_i])]['energy'].values      # Upper state energy
@@ -249,8 +219,8 @@ def calculate_csv(unc_states_df, unc_trans_df):
         Q_i = '%3s%3d%3d%3s' % (u_Gtot,u_J,u_K,u_Grot) + ','           # Upper-state 'local' quanta
         Q_f = '%3s%3d%3d%3s' % (l_Gtot,l_J,l_K,l_Grot) + ','           # Lower-state 'local' quanta
 
-        unc = math.sqrt(unc_i ** 2 + unc_f ** 2)                       # Uncertainty idices
-        v = float(abs(E_i - E_f))                                      # Vacuum wavenumber (cm−1)
+        unc = math.sqrt(unc_i ** 2 + unc_f ** 2)                   # Uncertainty idices
+        v = float(abs(E_i - E_f))                             # Vacuum wavenumber (cm−1)
         S = g_i * A * np.exp(- c2_T * E_f) * (1 - np.exp(- c2_T * v)) * pi_c_8 / (v ** 2) / Q    # Intensities
 
         wavenumber.append(v)
@@ -266,31 +236,30 @@ def calculate_csv(unc_states_df, unc_trans_df):
         lower_local_quanta += Q_f.split(',')
     
     iso_csv_df = pd.DataFrame()
-    iso_csv_df['v'] = wavenumber                       # Vacuum wavenumber (cm−1)
-    iso_csv_df['S'] = intensity.values                 # Intensities (cm-1/molecule cm-2) at standard 296K  
-    iso_csv_df['A'] = A_coefficient                    # Einstein A-coefficient
+    iso_csv_df['v'] = wavenumber                 # Vacuum wavenumber (cm−1)
+    iso_csv_df['S'] = intensity.values             # Intensities (cm-1/molecule cm-2) at standard 296K  
+    iso_csv_df['A'] = A_coefficient               # Einstein A-coefficient
     iso_csv_df['E_f'] = lower_state_energy.values      # Lower state energy
-    iso_csv_df['Ierr'] = uncertainty                   # Uncertainty indices
+    iso_csv_df['Ierr'] = uncertainty               # Uncertainty indices
     iso_csv_df['g_i'] = weight_upper_state.values      # Statistical weight of upper state
     iso_csv_df['g_f'] = weight_lower_state.values      # Statistical weight of lower state
-    iso_csv_df[M_mol_iso] = molecule_id                # Molecule number
-    iso_csv_df['I'] = isotopologue_id                  # Isotopologue number
-    iso_csv_df['gm_a'] = np.nan                        # Air-broadened half-width
-    iso_csv_df['gm_s'] = np.nan                        # Self-broadened half-width
-    iso_csv_df['n_a'] = np.nan                         # Temperature-dependence exponent for gamma_air
-    iso_csv_df['dt_a'] = np.nan                        # Air pressure-induced line shift
-    iso_csv_df['V_i'] = list(filter(None, upper_global_quanta))            # Upper-state 'global' quanta
-    iso_csv_df['V_f'] = list(filter(None, lower_global_quanta))            # Lower-state 'global' quanta
-    iso_csv_df['Q_i'] = list(filter(None, upper_local_quanta))             # Upper-state 'local' quanta
-    iso_csv_df['Q_f'] = list(filter(None, lower_local_quanta))             # Lower-state 'local' quanta                  
-    iso_csv_df['Iref'] = np.nan                        # Reference indices
-    iso_csv_df['*'] = np.nan                           # Flag
+    iso_csv_df[M_mol_iso] = molecule_id             # Molecule number
+    iso_csv_df['I'] = isotopologue_id              # Isotopologue number
+    iso_csv_df['gm_a'] = np.nan                  # Air-broadened half-width
+    iso_csv_df['gm_s'] = np.nan                  # Self-broadened half-width
+    iso_csv_df['n_a'] = np.nan                   # Temperature-dependence exponent for gamma_air
+    iso_csv_df['dt_a'] = np.nan                  # Air pressure-induced line shift
+    iso_csv_df['V_i'] = list(filter(None, upper_global_quanta))    # Upper-state 'global' quanta
+    iso_csv_df['V_f'] = list(filter(None, lower_global_quanta))    # Lower-state 'global' quanta
+    iso_csv_df['Q_i'] = list(filter(None, upper_local_quanta))     # Upper-state 'local' quanta
+    iso_csv_df['Q_f'] = list(filter(None, lower_local_quanta))     # Lower-state 'local' quanta                  
+    iso_csv_df['Iref'] = np.nan                  # Reference indices
+    iso_csv_df['*'] = np.nan                    # Flag
 
     return iso_csv_df
     
 
-
-
+# Part 3: Save as CSV Format.
 trans_col_name = ['i', 'f', 'A_if']
 t_df = dict()
 species_csv_df = pd.DataFrame()
@@ -299,7 +268,7 @@ for trans_filename in tqdm(trans_filenames):
     t_df[trans_filename] = pd.read_csv(trans_filename, compression='bz2', sep='\s+',
                                        usecols=[0,1,2], header=None, names=trans_col_name,
                                        chunksize=100_000_000, iterator=True, low_memory=False)
-
+    # Set an empty DataFrame to avoid meeting empty considered transitions files.
     iso_csv_df = pd.DataFrame()
     for trans_df in t_df[trans_filename]:
         unc_trans_df = extract_unc_trans(trans_df)
@@ -313,8 +282,5 @@ order = [M_mol_iso, 'I', 'v', 'S', 'A', 'gm_a', 'gm_s', 'E_f', 'n_a', 'dt_a',
 species_csv_df = species_csv_df[order]
 # Sort by increasing wavenumber
 species_csv_df = species_csv_df.sort_values(['v'], ascending = True).reset_index(drop=True)
-
-species_csv_df.to_csv(result_path + path_mol_iso.replace('/','__') + '.csv', header=True, index=False) 
-
-
-
+# Save into a CSV file with column names which contain molecule name.
+species_csv_df.to_csv(result_path + path_mol_iso.replace('/','__') + '.csv', header=True, index=False)

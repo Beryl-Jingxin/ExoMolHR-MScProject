@@ -1,6 +1,7 @@
+#!/usr/bin/env python
+# coding: utf-8
 
-
-
+# Import all what we need.
 import os
 import sys
 import json
@@ -9,28 +10,24 @@ import pandas as pd
 from tqdm import tqdm
 from io import StringIO
 
-
-
+# Read Master File.
+# Read the master file 'ExoMol All'.
+# The URL is http://www.exomol.com/db/exomol.all.
 exomol_all_url = 'http://www.exomol.com/db/exomol.all'
-
 content = requests.get(exomol_all_url).text.replace('#','')
 exomol_col_name = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6']
 exomol_all = pd.read_csv(StringIO(content), sep='\\s+', names=exomol_col_name, header=None)
 
-
-
-
+# Get all molecules, their iso-slugs, isoFormula and isotopologue dataset names. 
 first = exomol_all['c1']
 third = exomol_all['c3']
 row = len(first)
-
 
 iso_slug = pd.DataFrame()
 iso_formula = pd.DataFrame()
 isotopologue = pd.DataFrame()
 molecule_single = pd.DataFrame()
 num_isotopologues = pd.DataFrame()
-
 
 for i in tqdm_nb(range(row)):
         
@@ -40,31 +37,30 @@ for i in tqdm_nb(range(row)):
     _molecule_single = exomol_all[first.isin(['Molecule'])]['c0'].values
     _num_isotopologues = exomol_all[third.isin(['isotopologues'])]['c0'].values
 
-
 iso_slug = iso_slug.append(pd.DataFrame(_iso_slug))
 iso_formula = iso_formula.append(pd.DataFrame(_iso_formula))
 isotopologue = isotopologue.append(pd.DataFrame(_isotopologue))
 molecule_single = molecule_single.append(pd.DataFrame(_molecule_single))
 num_isotopologues = num_isotopologues.append(pd.DataFrame(_num_isotopologues))
 
-
-
-
-
+# Set the length of molecules list to be the same as the length of
+# iso-slugs and isotopologue dataset names for following loop.
 molecule_repeated = pd.DataFrame()
 molecule_num = len(molecule_single)
 
-for j in tqdm_nb(range(molecule_num)):    
-    molecule_repeated = molecule_repeated.append(pd.DataFrame((molecule_single.values[j] + ' ') * int(num_isotopologues.values[j])))
-    
-    
-molecule_str = str(molecule_repeated.values).replace("[['"," ").replace("']\n ['"," ").replace("']]"," ").replace("+","_p")
+for j in range(molecule_num):    
+    molecule_repeated = molecule_repeated.append(pd.DataFrame((molecule_single.values[j] + ' ')
+                                                              * int(num_isotopologues.values[j])))
+molecule_str = (str(molecule_repeated.values).replace("[['"," ")
+                .replace("']\n ['"," ").replace("']]"," ").replace("+","_p"))
 molecule = pd.read_csv(StringIO(molecule_str), sep='\s+', header=None)
 
-
-
+# Read Def File.
+# Get all URLs of def files.
+# The number of def files should be the same as the number of isotopoluge datasets.
+# The URLs contains the names of molecules, iso-slugs and isotopologue datasets.
+# We save their corresponding isoFormula names as another column.
 def_url = pd.DataFrame()
-
 def_num = len(iso_slug)
 
 for i in tqdm_nb(range(def_num)):
@@ -72,20 +68,21 @@ for i in tqdm_nb(range(def_num)):
                              + iso_slug.values[i] + '/'+ isotopologue.values[i] + '/'
                              + iso_slug.values[i] + '__' + isotopologue.values[i] + '.def')
 
-    
 def_url['IsoFormula'] = iso_formula
 def_url.columns = ['def url','IsoFormula']
 
-
-
+# Download def files and save them into ./data/def/ folder.
+# Save the names of these def files with the all information we got before,
+# that is to say, save as 'molecule_isoFormula_iso-slug_isotopologue.def'.
+# It will be more convenient for processing data later.
 def download_deffile(file_url):
-    
     failed_list = [] 
     for _link in tqdm_nb(file_url['def url'].values):
         
         link = _link
         iso_slug = link.split('/')[-4]
-        iso_formula = str(file_url[file_url['def url'].isin([link])]['IsoFormula'].values).replace("['","").replace("']","")
+        iso_formula = (str(file_url[file_url['def url'].isin([link])]['IsoFormula'].values)
+                       .replace("['","").replace("']",""))
         inital_def_name = link.split('/')[-1]
         new_def_filename = iso_slug + '_' + iso_formula + '_' + inital_def_name
         print("Downloading file: %s" % new_def_filename)
@@ -117,7 +114,8 @@ def download_deffile(file_url):
                     f.write(chunk)
                     f.flush()
                     done = int(50 * temp_size / total_size)
-                    sys.stdout.write("\r[%s%s] %d%%" % ('█' * done, ' ' * (50 - done), 100 * temp_size / total_size))
+                    sys.stdout.write("\r[%s%s] %d%%" % ('█' * done, ' ' * (50 - done),
+                                                        100 * temp_size / total_size))
                     sys.stdout.flush()
         
         print(" Downloaded!\n")
@@ -128,18 +126,10 @@ def download_deffile(file_url):
 
     return
 
-
-
-
-
 download_deffile(def_url)
 
-
-
-
-
+# Extract the def files whose the uncertainty availability row shows YES.
 path = "./data/def"
-
 def_col_name = ['c0', '#', 'c1', 'c2', 'c3', 'c4', 'c5']
 
 for(dirpath,dirnames,files)in os.walk(path):
@@ -160,18 +150,9 @@ for(dirpath,dirnames,files)in os.walk(path):
     print('There are ', tot, ' def files.\n')
     print('The uncertainty availability shows YES in the following ', count, ' def files:\n', unc_def_filename)
     print('\nThe uncertainty availability does not exit or shows NO in other ', tot - count, 'def files.')
-                    
 
-
-unc_def_filename
-
-
-
-
-
-# ## Get Download Links
-
-
+# Get Download Links with API.
+# Get the API URLs of those uncertainty molecules.
 molecule_str = []
 iso_formula_str = []
 isotopologue_str = []
@@ -188,31 +169,18 @@ for i in range(len(unc_def_filename)):
     iso.append(_iso)
     
     api_url.append('http://exomol.com/api/?molecule=*&datatype=linelist'.replace('*',molecule_str[i]))
-    
-print(iso)
-api_url
 
-
-
-
-
-
-
-# Get the download links of states.bz2 files and trans.bz2 files from webset.
-
-
+# Get the download links of states.bz2 files and trans.bz2 files from API.
 def get_target_url():
     
     """
-    Get the download url from api.
+    Get the download url from API.
 
     """
     
     file_url = []
     for i in range(len(iso)):
-        
         response = requests.get(api_url[i])
-
         if(response.status_code != 200):
             print('ExoMol API Error' + str(response.status_code))
 
@@ -237,37 +205,21 @@ def get_target_url():
                         file_url.append("http://www." + link)
                         url_show.append("http://www." + link)
                 except KeyError:
-                    print('Keyerror, keep going!')
-                    
+                    print('Keyerror, keep going!')  
     
         for k in url_show:
             print(k)
 
     return file_url
 
-
-
-
-
 target_link = get_target_url()
 
 
-# ## Download Files
-# 
-# We write all the download URLs into a text file, name it as $api__urls.txt$. 
-# 
-# In Linux, we use command 
-# 
-# ```
-# wget -r -i /.../save_path/.../api__urls.txt
-# ```
-# 
-# Download states.bz2 files and trans.bz2 files with download links. Save these files into correspoding folders.
-# 
-
-
-
-
+# Download States and Trans Files.
+# We write all the download URLs into a text file, name it as api__urls.txt. 
+# In Linux, we use command wget -d -r -i /.../save_path/.../api__urls.txt
+# Download states.bz2 files and trans.bz2 files with download links. 
+# Save these files into correspoding folders.
 url_path = './data/url'
 url_filename = url_path + '/api__urls.txt'
 
@@ -278,6 +230,3 @@ else:
 
 with open(url_filename, 'w') as file:
     file.write('\n'.join(target_link))
-
-
-

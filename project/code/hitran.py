@@ -1,18 +1,21 @@
+#!/usr/bin/env python
+# coding: utf-8
 
-
-
+# Import all what we need.
 import os
 import math
 import glob
 import requests
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from io import StringIO
 
 
-
-
-
+# Part 1: HITRAN Online Information.
+# Get the names of molecules, iso-slugs and isotopoluge datasets from the api__urls.txt
+# which saved the URLs with molecule, iso-slug and isotopologue.
+# Combine them with '/' for reading files from folders more convenient later.
 molecule = []
 iso_slug = []
 isotopologue = []
@@ -25,24 +28,21 @@ for line in open('./data/url/api__urls.txt'):
 
 molecule_list = list(set(molecule))
 molecule_list.sort(key=molecule.index)
-
 iso_slug_list = list(set(iso_slug))
 iso_slug_list.sort(key=iso_slug.index)
-
 isotopologue_list = list(set(isotopologue))
 isotopologue_list.sort(key=isotopologue.index)
-
 path_mol_iso_list = list(set(path_mol_iso))
 path_mol_iso_list.sort(key=path_mol_iso.index)
 
-
-
+# Convert the iso-slug names into the ones which are shown in the table of
+# HITRAN online website. It will help us to get their corresponding molecule
+# numbers, isotopologue numbers and fractional abundances. 
+# The HITRAN online URL is: https://hitran.org/docs/iso-meta/.
 unc_formula = pd.DataFrame(eval(str(iso_slug_list).replace('1H','H').replace('-','').replace('_p','+')))
 unc_formula.columns = ['exomol formula']
 
-
-
-
+# Information for calculations to obtain the HITRAN format data.
 hitran_online = pd.DataFrame()
 hitran_online['exomol formula'] = unc_formula['exomol formula']
 hitran_online['molecule ID'] = ['50','26','51','2','1','52','11','53','53','53','53','53']
@@ -50,6 +50,9 @@ hitran_online['isotopologue ID'] = ['1','1','1','1','1','1','1','1','2','3','4',
 hitran_online['fractional abundance'] = ['1','0.977599','1','0.984204','0.997317','1','0.995872','0.2','0.2','0.2','0.2','0.2']
 
 
+# # Part 2: Process Data to Satisfy HITRAN Format
+# Convert uncertainty values which we calculated in each molecule codes into uncertainty code.
+# See information from https://hitran.org/docs/uncertainties/.
 def convert_uncertainty_code(HITRAN_df):
     HITRAN_num = HITRAN_df['Ierr'].count()
     uncertainty_code = 0
@@ -78,9 +81,10 @@ def convert_uncertainty_code(HITRAN_df):
         Ierr.append(uncertainty_code)
     return Ierr
 
-
-
-
+# Convert CSV format into HITRAN format. All intensities less than 1.0E-30 can be ignored.
+# We only extract those rows whose intensity is larger than 1.0E-30.
+# To save data as HITRAN format, we just use _ to instead of blanks and save as a demo result.
+# Then we will use this demo result to convert it into HITRAN format result.
 def convert_csv_to_HITRAN(csv_df):
     HITRAN_df = csv_df[csv_df.S > 1.0E-30]
     Ierr = convert_uncertainty_code(HITRAN_df)
@@ -109,7 +113,17 @@ def convert_csv_to_HITRAN(csv_df):
     return HITRAN_df
 
 
-
+# Read all molecule CSV format results. 
+# Concatenate these CSV files into a large CSV file. In this CSV file, data are sorted by
+# wavenumbers and grouped by different molecule__iso-slug__isotopologue names.
+# Convert this large CSV format result into HITRAN format. 
+# Thre are columns names in CSV format result DataFrame, howeever,
+# we need to calculate intensity * fractional abundance.
+# Therefore, we remove those rows which have column names.
+# We just use the column isotopologue number (I),
+# extract those rows whose isotopologue numbers are not the string I.
+# Then we reset the type of the none empty column values.
+# After these, we convert CSV format into HITRAN format.
 
 col_name = ['M', 'I', 'v', 'S', 'A', 'gamma_air', 'gamma_self',
             'E_f', 'n_air', 'delta_air', 'V_i', 'V_f', 'Q_i', 'Q_f',
@@ -125,15 +139,21 @@ for csv_filename in csv_filenames:
     formula = csv_filename.replace('_p','+').split('_')[2].replace('1H','H').replace('-','')
     fractional_abundance = float(hitran_online[hitran_online['exomol formula'].isin([formula])]['fractional abundance'].values)
     for chunk in df[csv_filename]:
+        # Concatenate CSV files.
         one_csv_df = one_csv_df.append(chunk)
         csv_chunk = chunk
+        # Remove the rows which has column names.
         csv_df = csv_chunk[~csv_chunk['I'].isin(['I'])]
+        # Reset type of each column values.
         csv_df[['M', 'I']] = csv_df[['M', 'I']].astype(int)
         csv_df[['v', 'S', 'A', 'E_f','Ierr', 'g_i', 'g_f']] = csv_df[['v', 'S', 'A', 'E_f','Ierr', 'g_i', 'g_f']].astype(float)
+        # Convert CSV format into HITRAN format.
         hitran_df = convert_csv_to_HITRAN(csv_df)
         HITRAN_df = HITRAN_df.append(hitran_df)
 
 
+# 2.1 Save CSV Format Result.
+# Save the large concatenated CSV format result file.
 # Create a folder for saving result files.
 # If the folder exists, save files directory,otherwise, create it.
 one_file_path = './data/result/one_file/'
@@ -144,14 +164,17 @@ else:
     
 save_csv = one_csv_df.to_csv(one_file_path + 'csv_format.csv', header=True, index=False)
 
-
-
+# 2.2 Save HITRAN Format Result.
+# Sort HITRAN format data by increasing wavenumbers and then convert wavenumbers format
+# to be similar as other columns which is using _ instead of blank.
 HITRAN_df = HITRAN_df.sort_values(['v'], ascending = True).reset_index(drop=True)
 HITRAN_df['v'] = HITRAN_df['v'].map('{:_>12.6F}'.format)
 
-
-
-
+# Since if there is " in a value of DataFrame, then when we save data into a text file,
+# there will be two more " at the begining and the end of this value.
+# To avoid this problem, we replace ' to be upper and replace " to be lower.
+# We will then convert upper and lower back into ' and " later
+# when we write data into a HITRAN format result text file.
 HITRAN_df['V_i'] = HITRAN_df['V_i'].str.replace("'","upper")
 HITRAN_df['V_i'] = HITRAN_df['V_i'].str.replace('"','lower')
 HITRAN_df['V_f'] = HITRAN_df['V_f'].str.replace("'","upper")
@@ -161,21 +184,16 @@ HITRAN_df['Q_i'] = HITRAN_df['Q_i'].str.replace('"','lower')
 HITRAN_df['Q_f'] = HITRAN_df['Q_f'].str.replace("'","upper")
 HITRAN_df['Q_f'] = HITRAN_df['Q_f'].str.replace('"','lower')
 
-
-
-
-
+# Change the column order to satisfy the HITRAN format.
 order = ['M', 'I', 'v', 'S', 'A', 'gm_a', 'gm_s', 'E_f', 'n_a', 'dt_a',
          'V_i', 'V_f', 'Q_i', 'Q_f', 'Ierr', 'Iref', '*', 'g_i', 'g_f']
 HITRAN_df = HITRAN_df[order]
 
-
-
+# Save this demo as a text file for convering into HITRAN format result text file later.
 HITRAN_df.to_csv(one_file_path + 'demo_hitran.txt', header=None, index=False)
 
-
-
-
+# Read the demo file and replace string upper and lower back to ' and ".
+# Then write data into a text file. After all we obtain the HITRAN format result text file.
 def read_txt_in_chunks(path, chunk_size=1024*1024):
     file = open(path, 'r')
     while True:
@@ -189,4 +207,3 @@ with open(one_file_path + 'HITRAN_format.txt', 'w') as save_file:
     for chunk in read_txt_in_chunks(HITRAN_path):
         string = str(chunk).replace(',','').replace('_',' ').replace("upper","'").replace('lower','"')
         save_file.write(string)
-
