@@ -47,7 +47,7 @@ hitran_online = pd.DataFrame()
 hitran_online['exomol formula'] = unc_formula['exomol formula']
 hitran_online['molecule ID'] = ['50','26','51','2','1','52','11','53','53','53','53','53']
 hitran_online['isotopologue ID'] = ['1','1','1','1','1','1','1','1','2','3','4','5']
-hitran_online['fractional abundance'] = ['1','0.977599','1','0.984204','0.997317','1','0.995872','0.2','0.2','0.2','0.2','0.2']
+hitran_online['fractional abundance'] = ['1','0.977599','1','0.984204','0.997317','1','0.995872','1','1','1','1','1']
 
 
 # # Part 2: Process Data to Satisfy HITRAN Format
@@ -76,8 +76,10 @@ def convert_uncertainty_code(HITRAN_df):
             uncertainty_code = '{:>1}'.format(6) + '40000'
         elif (0.0000001 <= uncertainty_value < 0.000001):
             uncertainty_code = '{:>1}'.format(7) + '40000'
-        elif (uncertainty_value < 0.0000001):
+        elif (0.00000001 <= uncertainty_value < 0.0000001):
             uncertainty_code = '{:>1}'.format(8) + '40000'
+        elif (uncertainty_value < 0.00000001):
+            uncertainty_code = '{:>1}'.format(9) + '40000'
         Ierr.append(uncertainty_code)
     return Ierr
 
