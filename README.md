@@ -1,6 +1,6 @@
-# PHAS0077  Scientific Computing Individual Research Project
+# Scientific Computing Individual Research Project
 
-Scientific Computing Individual Research Project in UCL during the 2019/2020 academic season
+Scientific Computing Individual Research Project for PHAS0077 in UCL during the 2019/2020 academic season
 
 
 ## Project Title
@@ -88,7 +88,7 @@ python3 xxx.py
 To run the codes of project, there are three steps:
 Access in code folder:
 
- - Step 1    Download Files
+### - Step 1    Download Files
 
 ```bash
 [jzhang@prima code]$ chmod u+x exomol_master.py
@@ -97,7 +97,7 @@ Access in code folder:
 [jzhang@prima data]$ wget -b -r -i ./url/api__urls.txt    // Download states and trans files in backgrounder
 ```
 
- - Step 2    Process Data
+### - Step 2    Process Data
 
 For example, if we process the data of NH3:
 
@@ -122,7 +122,7 @@ Check the course of NH3.py (this command can be typed anywhere in Linux):
 [jzhang@prima ~]$ ps -aux|grep NH3.py    // NH3.py can be replaced as its PID
 ```
 
- - Step 3    Save Data
+### - Step 3    Save Data
 
 Save data as CSV and HITRAN format. This process is fast so that do not need to run this code in backgrounder.
 
