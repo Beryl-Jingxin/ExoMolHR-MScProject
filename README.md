@@ -1,21 +1,20 @@
-PHAS0077  Scientific Computing Individual Research Project
-------------------------------------------------------------
+# PHAS0077  Scientific Computing Individual Research Project
 
 Scientific Computing Individual Research Project in UCL during the 2019/2020 academic season
 
 
-# Project Title
+## Project Title
 
 The title of this project is:
 A relational database to store measured high-resolution spectra.
 
 
-# Purpose
+## Purpose
 
 The aim of this project is to extract molecule line lists of high-resolution spectra from ExoMol website and convert ExoMol format data into HITRAN format data.
 
 
-# Environment
+## Environment
 
 ```bash
 physics cluster `prima`
@@ -24,7 +23,7 @@ Linux
 ```
 
 
-# Install Dependancies
+## Install Dependancies
 
 If the packages used in codes are not installed, please use the following command in terminal.
 
@@ -38,7 +37,7 @@ Python 3.6.8
 [jzhang@prima ~]$ python3.6 -m pip install --user pandas
 ```
 
-# Usage Instructions
+## Usage Instructions
 
 Download codes.
 
@@ -135,10 +134,12 @@ Save data as CSV and HITRAN format. This process is fast so that do not need to 
 Compress the results:
 
 ```bash
-[jzhang@prima data]$tar -jcvf result.tar.bz2 result
+[jzhang@prima data]$ tar -jcvf result.tar.bz2 result
 ```
 
 ## Final structure
+
+Part of the final structure:
 
 ```
 ├── project
