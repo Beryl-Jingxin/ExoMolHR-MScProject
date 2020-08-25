@@ -60,9 +60,7 @@ def convert_uncertainty_code(HITRAN_df):
     for i in range(HITRAN_num):
         uncertainty = HITRAN_df['Ierr'].values[i]
         uncertainty_value = float(uncertainty)
-        if (1 <= uncertainty_value):
-            uncertainty_code = '{:>1}'.format(0) + '40000'
-        elif (0.1 <= uncertainty_value < 1):
+        if (0.1 <= uncertainty_value < 1):
             uncertainty_code = '{:>1}'.format(1) + '40000'
         elif (0.01 <= uncertainty_value < 0.1):
             uncertainty_code = '{:>1}'.format(2) + '40000'
@@ -80,8 +78,11 @@ def convert_uncertainty_code(HITRAN_df):
             uncertainty_code = '{:>1}'.format(8) + '40000'
         elif (uncertainty_value < 0.00000001):
             uncertainty_code = '{:>1}'.format(9) + '40000'
+        else:
+            uncertainty_code = '{:>1}'.format(0) + '40000'
         Ierr.append(uncertainty_code)
     return Ierr
+
 
 # Convert CSV format into HITRAN format. All intensities less than 1.0E-30 can be ignored.
 # We only extract those rows whose intensity is larger than 1.0E-30.
@@ -115,87 +116,7 @@ def convert_csv_to_HITRAN(csv_df):
     return HITRAN_df
 
 
-# Read all molecule CSV format results. 
-# Concatenate these CSV files into a large CSV file. In this CSV file, data are sorted by
-# wavenumbers and grouped by different molecule__iso-slug__isotopologue names.
-# Convert this large CSV format result into HITRAN format. 
-# Thre are columns names in CSV format result DataFrame, howeever,
-# we need to calculate intensity * fractional abundance.
-# Therefore, we remove those rows which have column names.
-# We just use the column isotopologue number (I),
-# extract those rows whose isotopologue numbers are not the string I.
-# Then we reset the type of the none empty column values.
-# After these, we convert CSV format into HITRAN format.
-
-col_name = ['M', 'I', 'v', 'S', 'A', 'gamma_air', 'gamma_self',
-            'E_f', 'n_air', 'delta_air', 'V_i', 'V_f', 'Q_i', 'Q_f',
-            'Ierr', 'Iref', '*', 'g_i', 'g_f']
-
-df = dict()
-one_csv_df = pd.DataFrame()
-HITRAN_df = pd.DataFrame()
-csv_filenames = glob.glob('./data/result/' + '*csv')
-for csv_filename in csv_filenames:
-    df[csv_filename] = pd.read_csv(csv_filename, header=None, names=col_name,
-                                   chunksize=100_000_000, iterator=True, low_memory=False)
-    formula = csv_filename.replace('_p','+').split('_')[2].replace('1H','H').replace('-','')
-    fractional_abundance = float(hitran_online[hitran_online['exomol formula'].isin([formula])]['fractional abundance'].values)
-    for chunk in df[csv_filename]:
-        # Concatenate CSV files.
-        one_csv_df = one_csv_df.append(chunk)
-        csv_chunk = chunk
-        # Remove the rows which has column names.
-        csv_df = csv_chunk[~csv_chunk['I'].isin(['I'])]
-        # Reset type of each column values.
-        csv_df[['M', 'I']] = csv_df[['M', 'I']].astype(int)
-        csv_df[['v', 'S', 'A', 'E_f','Ierr', 'g_i', 'g_f']] = csv_df[['v', 'S', 'A', 'E_f','Ierr', 'g_i', 'g_f']].astype(float)
-        # Convert CSV format into HITRAN format.
-        hitran_df = convert_csv_to_HITRAN(csv_df)
-        HITRAN_df = HITRAN_df.append(hitran_df)
-
-
-# 2.1 Save CSV Format Result.
-# Save the large concatenated CSV format result file.
-# Create a folder for saving result files.
-# If the folder exists, save files directory,otherwise, create it.
-one_file_path = './data/result/one_file/'
-if os.path.exists(one_file_path):                   # Determine whether the folder exists or not.
-    pass
-else:
-    os.makedirs(one_file_path, exist_ok=True)       # Create the folder.
-    
-save_csv = one_csv_df.to_csv(one_file_path + 'csv_format.csv', header=True, index=False)
-
-# 2.2 Save HITRAN Format Result.
-# Sort HITRAN format data by increasing wavenumbers and then convert wavenumbers format
-# to be similar as other columns which is using _ instead of blank.
-HITRAN_df = HITRAN_df.sort_values(['v'], ascending = True).reset_index(drop=True)
-HITRAN_df['v'] = HITRAN_df['v'].map('{:_>12.6F}'.format)
-
-# Since if there is " in a value of DataFrame, then when we save data into a text file,
-# there will be two more " at the begining and the end of this value.
-# To avoid this problem, we replace ' to be upper and replace " to be lower.
-# We will then convert upper and lower back into ' and " later
-# when we write data into a HITRAN format result text file.
-HITRAN_df['V_i'] = HITRAN_df['V_i'].str.replace("'","upper")
-HITRAN_df['V_i'] = HITRAN_df['V_i'].str.replace('"','lower')
-HITRAN_df['V_f'] = HITRAN_df['V_f'].str.replace("'","upper")
-HITRAN_df['V_f'] = HITRAN_df['V_f'].str.replace('"','lower')
-HITRAN_df['Q_i'] = HITRAN_df['Q_i'].str.replace("'","upper")
-HITRAN_df['Q_i'] = HITRAN_df['Q_i'].str.replace('"','lower')
-HITRAN_df['Q_f'] = HITRAN_df['Q_f'].str.replace("'","upper")
-HITRAN_df['Q_f'] = HITRAN_df['Q_f'].str.replace('"','lower')
-
-# Change the column order to satisfy the HITRAN format.
-order = ['M', 'I', 'v', 'S', 'A', 'gm_a', 'gm_s', 'E_f', 'n_a', 'dt_a',
-         'V_i', 'V_f', 'Q_i', 'Q_f', 'Ierr', 'Iref', '*', 'g_i', 'g_f']
-HITRAN_df = HITRAN_df[order]
-
-# Save this demo as a text file for convering into HITRAN format result text file later.
-HITRAN_df.to_csv(one_file_path + 'demo_hitran.txt', header=None, index=False)
-
-# Read the demo file and replace string upper and lower back to ' and ".
-# Then write data into a text file. After all we obtain the HITRAN format result text file.
+# Read data in chunks.
 def read_txt_in_chunks(path, chunk_size=1024*1024):
     file = open(path, 'r')
     while True:
@@ -204,8 +125,143 @@ def read_txt_in_chunks(path, chunk_size=1024*1024):
             break
         yield chunk_data
 
-HITRAN_path = one_file_path + 'demo_hitran.txt'
-with open(one_file_path + 'HITRAN_format.txt', 'w') as save_file:
-    for chunk in read_txt_in_chunks(HITRAN_path):
-        string = str(chunk).replace(',','').replace('_',' ').replace("upper","'").replace('lower','"')
-        save_file.write(string)
+
+def save_hitran(df, demo_path, save_path):
+    '''
+    Sort HITRAN format data by increasing wavenumbers and then convert wavenumbers format
+    to be similar as other columns which is using _ instead of blank.
+    Since if there is " in a value of DataFrame, then when we save data into a text file,
+    there will be two more " at the begining and the end of this value.
+    To avoid this problem, we replace ' to be upper and replace " to be lower.
+    We will then convert upper and lower back into ' and " later when we write data
+    into a HITRAN format result text file.
+    Change the order to Change the column order to satisfy the HITRAN format.
+    Save a demo file as a text file for convering into HITRAN format result text file later.
+    Read the demo file and replace string upper and lower back to ' and ".
+    Then write data into a text file. After all we obtain the HITRAN format result text file.
+    '''
+    
+    # Sort HITRAN format data by increasing wavenumbers.
+    df = df.sort_values(['v'], ascending = True).reset_index(drop=True)
+    # Convert wavenumbers format to be similar as other columns which is using _ instead of blank.
+    df['v'] = df['v'].map('{:_>12.6F}'.format)
+    # To avoid the changes of ' and " when converting from csv to txt.
+    df['V_i'] = df['V_i'].str.replace("'","upper")
+    df['V_i'] = df['V_i'].str.replace('"','lower')
+    df['V_f'] = df['V_f'].str.replace("'","upper")
+    df['V_f'] = df['V_f'].str.replace('"','lower')
+    df['Q_i'] = df['Q_i'].str.replace("'","upper")
+    df['Q_i'] = df['Q_i'].str.replace('"','lower')
+    df['Q_f'] = df['Q_f'].str.replace("'","upper")
+    df['Q_f'] = df['Q_f'].str.replace('"','lower')
+    # Change the column order to satisfy the HITRAN format.
+    order = ['M', 'I', 'v', 'S', 'A', 'gm_a', 'gm_s', 'E_f', 'n_a', 'dt_a',
+             'V_i', 'V_f', 'Q_i', 'Q_f', 'Ierr', 'Iref', '*', 'g_i', 'g_f']
+    df = df[order]
+    # Save a demo file for converting into HITRAN format.
+    df.to_csv(demo_path, header=None, index=False)
+    
+    with open(save_path, 'w') as save_file:
+        for chunk in read_txt_in_chunks(demo_path):
+            # Replace back to ' and " to satisfy the HITRAN format.
+            string = str(chunk).replace(',','').replace('_',' ').replace("upper","'").replace('lower','"')
+            save_file.write(string)
+
+
+# A folder for save demo files, the files which are named with demo are not the results.
+# Create a folder for saving demo files.
+# If the folder exists, save files directory,otherwise, create it.
+demo_file_path = './data/result/demo/'
+if os.path.exists(demo_file_path):            # Determine whether the folder exists or not.
+    pass
+else:
+    os.makedirs(demo_file_path, exist_ok=True)   # Create the folder.
+
+
+# A folder for save HITRAN format files, the files which are named as
+# molecule__iso-slug__isotopologue_HITRAN.txt
+# Create a folder for saving HITRAN format files.
+# If the folder exists, save files directory,otherwise, create it
+hitran_file_path = './data/result/hitran/'
+if os.path.exists(hitran_file_path):           # Determine whether the folder exists or not.
+    pass
+else:
+    os.makedirs(hitran_file_path, exist_ok=True)  # Create the folder.
+
+
+# Save HITRAN format files 
+# Read all molecule CSV format results. 
+# Concatenate these CSV files into a large CSV file.
+# In this CSV file, data are sorted by wavenumbers and grouped by different
+# molecule__iso-slug__isotopologue names.
+
+# Convert this large CSV format result into HITRAN format.
+# Thre are columns names in CSV format result DataFrame,
+# howeever, we need to calculate intensity * fractional abundance.
+# Therefore, we remove those rows which have column names.
+# We just use the column isotopologue number (I),
+# extract those rows whose isotopologue numbers are not the string I.
+# Then we reset the type of the none empty column values.
+# After these, we convert CSV format into HITRAN format.
+
+# Save HITRAN format files in a loop and save the filenames as
+# molecule__iso-slug__isotopologue_HITRAN.txt
+
+# Concatenate HITRAN dataframes for saving as one final HITRAN format text with the whole data.
+col_name = ['M', 'I', 'v', 'S', 'A', 'gamma_air', 'gamma_self',
+            'E_f', 'n_air', 'delta_air', 'V_i', 'V_f', 'Q_i', 'Q_f',
+            'Ierr', 'Iref', '*', 'g_i', 'g_f']
+
+df = dict()
+one_csv_df = pd.DataFrame()
+HITRAN_df = pd.DataFrame()
+csv_filenames = glob.glob('./data/result/csv/' + '*csv')
+for csv_filename in csv_filenames:
+    df[csv_filename] = pd.read_csv(csv_filename, header=None, names=col_name,
+                                   chunksize=100_000_000, iterator=True, low_memory=False)
+    formula = csv_filename.replace('_p','+').split('_')[2].replace('1H','H').replace('-','')
+    fractional_abundance = float(hitran_online[hitran_online['exomol formula'].isin([formula])]['fractional abundance'].values)
+    for chunk in df[csv_filename]:
+        # Concatenate CSV files.
+        one_csv_df = one_csv_df.append(chunk)
+        
+        # For converting HITRAN format.
+        csv_chunk = chunk
+        # Remove the rows which has column names.
+        csv_df = csv_chunk[~csv_chunk['I'].isin(['I'])]
+        # Reset type of each column values.
+        csv_df[['M', 'I']] = csv_df[['M', 'I']].astype(int)
+        csv_df[['v', 'S', 'A', 'E_f','Ierr', 'g_i', 'g_f']] = csv_df[['v', 'S', 'A', 'E_f','Ierr', 'g_i', 'g_f']].astype(float)
+        # Convert CSV format into HITRAN format.
+        hitran_df = convert_csv_to_HITRAN(csv_df)
+        
+        # Save as HITRAN format per species
+        hitran_dfs = hitran_df
+        save_hitran_filename = csv_filename.split('\\')[1].split('.')[0]
+        demo_paths = demo_file_path + save_hitran_filename + '_demo_hitran.txt'
+        save_paths = hitran_file_path + save_hitran_filename + '_hitran.txt'
+        save_hitrans = save_hitran(hitran_df, demo_paths, save_paths)
+        
+        # For saving all data into one HITRAN format file.
+        HITRAN_df = HITRAN_df.append(hitran_df)
+
+
+# 2.1 Save CSV Format Result
+# This csv format result includes whole data (all molecules) and is sorted by increasing wavenumbers.
+# Save the large concatenated CSV format result file.
+# Create a folder for saving result files.
+# If the folder exists, save files directory,otherwise, create it.
+two_files_path = './data/result/two_files/'
+if os.path.exists(two_files_path):            # Determine whether the folder exists or not.
+    pass
+else:
+    os.makedirs(two_files_path, exist_ok=True)   # Create the folder.
+    
+save_csv = one_csv_df.to_csv(two_files_path + 'CSV_format.csv', header=True, index=False)
+
+
+# 2.2 Save HITRAN Format Result
+# This HITRAN format result includes whole data (all molecules) and is sorted by increasing wavenumbers.
+demo_path = demo_file_path + 'demo_hitran.txt'
+save_path = two_files_path + 'HITRAN_format.txt'
+save_HITRAN = save_hitran(HITRAN_df, demo_path, save_path)
