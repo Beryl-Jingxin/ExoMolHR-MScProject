@@ -63,7 +63,7 @@ read_path = './data/www.exomol.com/db/'
 
 # Create a folder for saving result files.
 # If the folder exists, save files directory,otherwise, create it.
-result_path = './data/result/'
+result_path = './data/result/csv/'
 # Determine whether the folder exists or not.
 if os.path.exists(result_path):
     pass
