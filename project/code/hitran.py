@@ -237,7 +237,7 @@ for csv_filename in csv_filenames:
         
         # Save as HITRAN format per species
         hitran_dfs = hitran_df
-        save_hitran_filename = csv_filename.split('\\')[1].split('.')[0]
+        save_hitran_filename = csv_filename.replace('\\','/').split('/')[-1].split('.')[0]
         demo_paths = demo_file_path + save_hitran_filename + '_demo_hitran.txt'
         save_paths = hitran_file_path + save_hitran_filename + '_hitran.txt'
         save_hitrans = save_hitran(hitran_df, demo_paths, save_paths)
