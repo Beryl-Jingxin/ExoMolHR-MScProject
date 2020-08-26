@@ -197,7 +197,7 @@ else:
 
 # Convert this large CSV format result into HITRAN format.
 # Thre are columns names in CSV format result DataFrame,
-# howeever, we need to calculate intensity * fractional abundance.
+# however, we need to calculate intensity * fractional abundance.
 # Therefore, we remove those rows which have column names.
 # We just use the column isotopologue number (I),
 # extract those rows whose isotopologue numbers are not the string I.

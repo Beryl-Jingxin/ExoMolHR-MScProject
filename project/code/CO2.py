@@ -188,10 +188,10 @@ def calculate_csv(unc_states_df, unc_trans_df):
         l_J = unc_states_df[state_id.isin([id_f])]['J_tot'].values[0]
         l_ef = unc_states_df[state_id.isin([id_f])]['e/f'].values[0]
 
-        V_i = '     %2d%2d%2d%2d%2d' % (u_m1,u_m2,u_l,u_m3) + ','      # Upper-state 'global' quanta
-        V_f = '     %2d%2d%2d%2d%2d' % (l_m1,l_m2,l_l,l_m3) + ','      # Lower-state 'global' quanta
-        Q_i = '          %3d%2s' % (u_J,u_ef) + ','              # Upper-state 'local' quanta
-        Q_f = '          %3d%2s' % (l_J,l_ef) + ','              # Lower-state 'local' quanta
+        V_i = '     %2d%2d%2d%2d%2d' % (u_m1,u_m2,u_l,u_m3,u_r) + ','    # Upper-state 'global' quanta
+        V_f = '     %2d%2d%2d%2d%2d' % (l_m1,l_m2,l_l,l_m3,l_r) + ','    # Lower-state 'global' quanta
+        Q_i = '          %3d%2s' % (u_J,u_ef) + ','               # Upper-state 'local' quanta
+        Q_f = '          %3d%2s' % (l_J,l_ef) + ','               # Lower-state 'local' quanta
 
         unc = math.sqrt(unc_i ** 2 + unc_f ** 2)                   # Uncertainty idices
         v = float(abs(E_i - E_f))                             # Vacuum wavenumber (cm−1)
