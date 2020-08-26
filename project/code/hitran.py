@@ -89,29 +89,29 @@ def convert_uncertainty_code(HITRAN_df):
 # To save data as HITRAN format, we just use _ to instead of blanks and save as a demo result.
 # Then we will use this demo result to convert it into HITRAN format result.
 def convert_csv_to_HITRAN(csv_df):
-    HITRAN_df = csv_df[csv_df.S > 1.0E-30]
+    HITRAN_df = csv_df[csv_df['S'] > 1.0E-30]
     Ierr = convert_uncertainty_code(HITRAN_df)
 
-    HITRAN_df['M'] = HITRAN_df.M.map('{:_>2}'.format)
-    HITRAN_df['I'] = HITRAN_df.I.map('{:>1}'.format)
-    HITRAN_df['v'] = HITRAN_df.v
-    HITRAN_df['S'] = HITRAN_df.S * fractional_abundance
-    HITRAN_df['S'] = HITRAN_df.S.map('{:_>10.3E}'.format)
-    HITRAN_df['A'] = HITRAN_df.A.map('{:_>10.3E}'.format)
+    HITRAN_df['M'] = HITRAN_df['M'].map('{:_>2}'.format)
+    HITRAN_df['I'] = HITRAN_df['I'].map('{:>1}'.format)
+    HITRAN_df['v'] = HITRAN_df['v']
+    HITRAN_df['S'] = HITRAN_df['S'] * fractional_abundance
+    HITRAN_df['S'] = HITRAN_df['S'].map('{:_>10.3E}'.format)
+    HITRAN_df['A'] = HITRAN_df['A'].map('{:_>10.3E}'.format)
     HITRAN_df['gm_a'] = '_' * 5
     HITRAN_df['gm_s'] = '_' * 5
-    HITRAN_df['E_f'] = HITRAN_df.E_f.map('{:_>10.4F}'.format)
+    HITRAN_df['E_f'] = HITRAN_df['E_f'].map('{:_>10.4F}'.format)
     HITRAN_df['n_a'] = '_' * 4
     HITRAN_df['dt_a'] = '_' * 8
-    HITRAN_df['V_i'] = HITRAN_df.V_i
-    HITRAN_df['V_f'] = HITRAN_df.V_f
-    HITRAN_df['Q_i'] = HITRAN_df.Q_i
-    HITRAN_df['Q_f'] = HITRAN_df.Q_f
+    HITRAN_df['V_i'] = HITRAN_df['V_i']
+    HITRAN_df['V_f'] = HITRAN_df['V_f']
+    HITRAN_df['Q_i'] = HITRAN_df['Q_i']
+    HITRAN_df['Q_f'] = HITRAN_df['Q_f']
     HITRAN_df['Ierr'] = Ierr
     HITRAN_df['Iref'] = '_' * 12
     HITRAN_df['*'] = '_'
-    HITRAN_df['g_i'] = HITRAN_df.g_i.map('{:_>7.1F}'.format)
-    HITRAN_df['g_f'] = HITRAN_df.g_f.map('{:_>7.1F}'.format)
+    HITRAN_df['g_i'] = HITRAN_df['g_i'].map('{:_>7.1F}'.format)
+    HITRAN_df['g_f'] = HITRAN_df['g_f'].map('{:_>7.1F}'.format)
 
     return HITRAN_df
 
