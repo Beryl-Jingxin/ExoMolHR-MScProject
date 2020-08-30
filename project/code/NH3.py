@@ -96,8 +96,8 @@ for states_filename in states_filenames:
     for chunk in s_df[states_filename]:
         states_df = states_df.append(chunk)
 
-# Extract rows of states file whose uncertainty indices are small than 0.001.
-unc_states_df = states_df[states_df['Unc'] < float(0.001)]
+# Extract rows of states file whose uncertainty indices are small than 0.01.
+unc_states_df = states_df[states_df['Unc'] < float(0.01)]
 
 # 2.2 Read Partition Function File.
 pf_col_name = ['T', 'Q']
