@@ -17,7 +17,7 @@ The aim of this project is to extract molecule line lists of high-resolution spe
 ## Environment
 
 ```bash
-physics cluster `prima`
+physics cluster prima
 Python 3.6.8
 Linux
 ```
@@ -73,8 +73,31 @@ Part of this project build instructions:
 │          │     ├── TiO.ipynb
 │          │     └── hitran.ipynb
 │          └── data
-│                └── url
-│                     └── api__urls.txt
+│                ├── url
+│                │    └── api__urls.txt
+│                └── result
+│                     ├── csv
+│                     │    ├── AlH__27Al-1H__AlHambra.csv
+│                     │    ├── C2__12C2__8states.csv
+│                     │    ├── C2H2__12C2-1H2__aCeTY.csv
+│                     │    ├── CO2__12C-16O2__UCL-4000.rar
+│                     │    ├── H2O__1H2-16O__POKAZATEL.rar
+│                     │    ├── H3O_p__1H3-16O_p__eXeL.csv
+│                     │    ├── NH3__14N-1H3__CoYuTe.rar
+│                     │    └── TiO__48Ti-16O__Toto.csv
+│                     ├── hitran
+│                     │    ├── AlH__27Al-1H__AlHambra_hitran.txt
+│                     │    ├── C2__12C2__8states_hitran.txt
+│                     │    ├── C2H2__12C2-1H2__aCeTY_hitran.txt
+│                     │    ├── CO2__12C-16O2__UCL-4000_hitran.txt
+│                     │    ├── H2O__1H2-16O__POKAZATEL_hitran.txt
+│                     │    ├── H3O_p__1H3-16O_p__eXeL_hitran.txt
+│                     │    ├── NH3__14N-1H3__CoYuTe_hitran.txt
+│                     │    └── TiO__48Ti-16O__Toto_hitran.txt
+│                     └── two_files
+│                          ├── CSV_format.rar        // Concatenated CSV format result
+│                          └── HITRAN_format.txt     // Concatenated HITRAN format result
+├── .gitatrributes
 └── README.md
 ```
 
@@ -243,8 +266,9 @@ Note: the files in folder demo are not results.
 │                │    │    ├── TiO__48Ti-16O__Toto_demo_hitran.txt
 │                │    │    └── demo_hitran.txt
 │                │    └── two_files
-│                │           ├── CSV_format.csv        // CSV format result
-│                │           └── HITRAN_format.txt     // HITRAN format result
-│                └── result.tar.bz2     
+│                │         ├── CSV_format.csv        // CSV format result
+│                │         └── HITRAN_format.txt     // HITRAN format result
+│                └── result.tar.bz2  
+├── .gitatrributes   
 └── README.md
 ```
