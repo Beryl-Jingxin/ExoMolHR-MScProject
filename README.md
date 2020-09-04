@@ -167,7 +167,6 @@ Note: the files in folder demo are not results.
 
 ```
 ├── project
-│     ├── dissertation
 │     └── code
 │          ├── exomol_master.py   
 │          ├── AlH.py                    
