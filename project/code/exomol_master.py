@@ -57,7 +57,7 @@ molecule = pd.read_csv(StringIO(molecule_str), sep='\s+', header=None)
 
 # Read Def File.
 # Get all URLs of def files.
-# The number of def files should be the same as the number of isotopoluge datasets.
+# The number of def files should be the same as the number of isotopologue datasets.
 # The URLs contains the names of molecules, iso-slugs and isotopologue datasets.
 # We save their corresponding isoFormula names as another column.
 def_url = pd.DataFrame()
@@ -72,7 +72,7 @@ def_url['IsoFormula'] = iso_formula
 def_url.columns = ['def url','IsoFormula']
 
 # Download def files and save them into ./data/def/ folder.
-# Save the names of these def files with the all information we got before,
+# Save the names of these def files with all information we got before,
 # that is to say, save as 'molecule_isoFormula_iso-slug_isotopologue.def'.
 # It will be more convenient for processing data later.
 def download_deffile(file_url):

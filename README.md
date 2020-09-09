@@ -73,6 +73,7 @@ Part of this project build instructions:
 │          │     ├── TiO.ipynb
 │          │     └── hitran.ipynb
 │          └── data
+│                ├── result_screenshot
 │                ├── url
 │                │    └── api__urls.txt
 │                └── result
@@ -190,6 +191,7 @@ Note: the files in folder demo are not results.
 │          │     ├── TiO.ipynb
 │          │     └── hitran.ipynb
 │          └── data
+│                ├── result_screenshot
 │                ├── def
 │                │    ├── AlCl_(27Al)(35Cl)_27Al-35Cl__MoLLIST.def
 │                │    ├── AlCl_(27Al)(37Cl)_27Al-37Cl__MoLLIST.def
