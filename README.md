@@ -1,11 +1,11 @@
-# Scientific Computing Individual Research Project
+# ExoMolHR Project
 
-Scientific Computing Individual Research Project for PHAS0077 in UCL during the 2019/2020 academic season
+Individual Research Project 
 
 
 ## Project Title
 
-The title of this project is:
+
 A relational database to store measured high-resolution spectra.
 
 
@@ -42,7 +42,7 @@ Python 3.6.8
 Download codes.
 
 ```bash
-git clone https://github.com/Beryl-Jingxin/PHAS0077.git
+git clone https://github.com/Beryl-Jingxin/ExoMolHR.git
 ```
 
 Part of this project build instructions:
